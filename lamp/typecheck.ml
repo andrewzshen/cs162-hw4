@@ -16,12 +16,12 @@ let ty_err msg = raise (Type_error msg)
 let rec equal_ty (t1 : ty) (t2 : ty) : bool = failwith "TODO"
 
 let rec abstract_eval (env : env) (e : expr) : ty =
-  try
-    match e with
-    (* T-Int rule *)
-    | Num _ -> TInt
-    (* T-True and T-false *)
-    | True | False -> TBool
-    (* Your code here *)
-    | _ -> failwith "TODO"
-  with Type_error msg -> ty_err (msg ^ "\nin expression " ^ show_expr e)
+    try
+        match e with
+        (* T-Int rule *)
+        | Num _ -> TInt
+        (* T-True and T-false *)
+        | True | False -> TBool
+        (* Your code here *)
+        | _ -> failwith "TODO"
+    with Type_error msg -> ty_err (msg ^ "\nin expression " ^ show_expr e)
