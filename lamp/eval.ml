@@ -41,12 +41,12 @@ let rec subst (x : string) (e : expr) (c : expr) : expr =
     | Num n -> Num n
     | Binop (binop, lhs, rhs) -> Binop (binop, subst x e lhs, subst x e rhs)
     | Var y -> if x = y then e else Var y
-    | Lambda (ty, (param, body)) ->
+    | Lambda (param_t, (param, body)) ->
         let body' = 
             if String.equal x param || Vars.mem param (free_vars e)
             then body 
             else subst x e body in
-        Lambda (ty, (param, body'))
+        Lambda (param_t, (param, body'))
     | App (fn, arg) -> App (subst x e fn, subst x e arg)
     | Let (value, (name, body)) ->
         let body' = 
@@ -58,7 +58,7 @@ let rec subst (x : string) (e : expr) (c : expr) : expr =
     | False -> False 
     | IfThenElse (cond, tt, ff) -> IfThenElse (subst x e cond, subst x e tt, subst x e ff) 
     | Comp (relop, lhs, rhs) -> Comp (relop, subst x e lhs, subst x e rhs) 
-    | ListNil ty -> ListNil ty 
+    | ListNil elem_t -> ListNil elem_t 
     | ListCons (head, tail) -> ListCons (subst x e head, subst x e tail) 
     | ListMatch (scrutinee, nil_case, (h, (t, cons_case))) -> 
         let scrutinee' = subst x e scrutinee in
@@ -69,9 +69,13 @@ let rec subst (x : string) (e : expr) (c : expr) : expr =
             else subst x e cons_case 
         in
         ListMatch (scrutinee', nil_case', (h, (t, cons_case')))
-    | Fix (ty, (self, body)) ->
-        let body' = if String.equal x self then body else subst x e body in 
-        Fix (ty, (self, body'))    
+    | Fix (expected_t, (self, body)) ->
+        let body' =
+            if String.equal x self 
+            then body 
+            else subst x e body 
+        in 
+        Fix (expected_t, (self, body'))    
     | _ -> im_stuck (Fmt.str "Unknown expression type: %a" Pretty.expr e)
 
 (** Evaluate expression e *)
@@ -88,7 +92,7 @@ let rec eval (e : expr) : expr =
                 | Mul -> Num (x * y))
             | _, _ -> im_stuck (Fmt.str "Invalid binop: %a" Pretty.expr e))
         | Var _ -> im_stuck (Fmt.str "Unassigned: %a" Pretty.expr e) 
-        | Lambda (ty, binder)-> Lambda (ty, binder)
+        | Lambda (param_t, binder)-> Lambda (param_t, binder)
         | App (fn, arg) -> 
             (match eval fn with
             | Lambda (_, (param, body)) -> eval (subst param (eval arg) body) 
@@ -109,14 +113,14 @@ let rec eval (e : expr) : expr =
                 | Gt -> if x > y then True else False
                 | Lt -> if x < y then True else False)
             | _, _ -> im_stuck (Fmt.str "Non-number operands to comparison: %a" Pretty.expr e))      
-        | ListNil ty -> ListNil ty
+        | ListNil elem_t -> ListNil elem_t
         | ListCons (head, tail) -> ListCons (eval head, eval tail)
         | ListMatch (scrutinee, nil_case, (h, (t, cons_case))) -> 
             (match eval scrutinee with
             | ListNil _ -> eval nil_case
             | ListCons (head, tail) -> eval (subst h head (subst t tail cons_case))
             | _ -> im_stuck (Fmt.str "List error: %a" Pretty.expr e))
-        | Fix (ty, (self, body)) -> eval (subst self (Fix (ty, (self, body))) body)
+        | Fix (expected_t, (self, body)) -> eval (subst self (Fix (expected_t, (self, body))) body)
         (* Some | None ? *)
         | E1 e1 -> E1 (eval e1) 
         | E2 e2 -> E2 (eval e2) 
