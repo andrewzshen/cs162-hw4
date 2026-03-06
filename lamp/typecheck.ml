@@ -90,7 +90,7 @@ let rec abstract_eval (env : env) (e : expr) : ty =
             let head_t = abstract_eval env head in
             let tail_t = abstract_eval env tail in
             (match tail_t with
-            | TList elem_t -> 
+            | TList elem_t ->
                 if equal_ty head_t elem_t
                 then TList elem_t
                 else ty_err "Head type mismatch in list"
@@ -120,5 +120,29 @@ let rec abstract_eval (env : env) (e : expr) : ty =
             if equal_ty expected_t expected_t'
             then expected_t
             else ty_err "Type annotation does not match actual type"
+        | Unit -> TUnit
         | _ -> failwith "TODO"
     with Type_error msg -> ty_err (msg ^ "\nin expression " ^ show_expr e)
+
+let rec size (t : ty) : int option =
+    match t with 
+    | TVar x -> failwith "TODO" 
+    | TInt -> None
+    | TBool -> Some 2
+    | TList elem_t -> None
+    | TFun (param_t, ret_t) -> None
+    | TUnit -> Some 1 
+    | TVoid -> Some 1 
+    | TProd (t1, t2) -> 
+        let s1 = size t1 in
+        let s2 = size t2 in
+        (match s1, s2 with
+        | Some s1', Some s2' -> Some (s1' * s2')
+        | _ -> None)
+    | TSum (t1, t2) -> 
+        let s1 = size t1 in
+        let s2 = size t2 in
+        (match s1, s2 with
+        | Some s1', Some s2' -> Some (s1' + s2')
+        | _ -> None)
+    | _ -> failwith "TODO"

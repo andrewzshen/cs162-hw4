@@ -132,6 +132,8 @@ let rec eval (e : expr) : expr =
         | I1 e1 -> todo ()
         | I2 e2 -> todo ()
         | Both (e1, e2) -> todo ()
+        | Unit -> Unit
+        | Absurd e -> (match eval e with _ -> im_stuck (Fmt.str "Void cannot have a value: %a" Pretty.expr e)) 
         | _ -> im_stuck (Fmt.str "Ill-formed expression: %a" Pretty.expr e)
     with Stuck msg ->
         im_stuck (Fmt.str "%s\nin expression %a" msg Pretty.expr e)
