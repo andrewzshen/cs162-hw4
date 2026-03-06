@@ -121,28 +121,57 @@ let rec abstract_eval (env : env) (e : expr) : ty =
             then expected_t
             else ty_err "Type annotation does not match actual type"
         | Unit -> TUnit
+        | Both (e1, e2) -> 
+            let t1 = abstract_eval env e1 in
+            let t2 = abstract_eval env e2 in
+            TProd (t1, t2)
+        | I1 e1 ->
+            (match abstract_eval env e1 with
+            | TProd (t1, _) -> t1 
+            | _ -> ty_err  "Expected prod type")
+        | I2 e2 -> 
+            (match abstract_eval env e2 with
+            | TProd (_, t2) -> t2 
+            | _ -> ty_err  "Expected prod type")
+        (* void *)
+        | Absurd _ -> TVoid
+        (* external choice *)
+        | E1 e1 -> failwith "TODO"
+        | E2 e2 -> failwith "TODO" 
+        | Either (e, b1, b2) -> failwith "TODO" 
         | _ -> failwith "TODO"
     with Type_error msg -> ty_err (msg ^ "\nin expression " ^ show_expr e)
 
 let rec size (t : ty) : int option =
     match t with 
-    | TVar x -> failwith "TODO" 
+    | TVar _ -> None 
     | TInt -> None
     | TBool -> Some 2
-    | TList elem_t -> None
-    | TFun (param_t, ret_t) -> None
+    | TList elem_t ->
+        (match size elem_t with
+        | Some 0 -> Some 1
+        | _ -> None)
+    | TFun (param_t, ret_t) -> 
+        (match size param_t, size ret_t with
+        | Some s1, Some s2 -> 
+            let rec pow a = function
+            | 0 -> 1
+            | 1 -> a
+            | n -> 
+                let b = pow a (n / 2) in
+                b * b * (if n % 2 = 0 then 1 else a)
+            in
+            Some (pow s2 s1)
+        | _ -> None)
     | TUnit -> Some 1 
-    | TVoid -> Some 1 
+    | TVoid -> Some 0 
     | TProd (t1, t2) -> 
-        let s1 = size t1 in
-        let s2 = size t2 in
-        (match s1, s2 with
-        | Some s1', Some s2' -> Some (s1' * s2')
+        (match size t1, size t2 with
+        | Some 0, _ | _, Some 0 -> Some 0
+        | Some s1, Some s2 -> Some (s1 * s2)
         | _ -> None)
     | TSum (t1, t2) -> 
-        let s1 = size t1 in
-        let s2 = size t2 in
-        (match s1, s2 with
-        | Some s1', Some s2' -> Some (s1' + s2')
+        (match size t1, size t2 with
+        | Some s1, Some s2 -> Some (s1 + s2)
         | _ -> None)
     | _ -> failwith "TODO"

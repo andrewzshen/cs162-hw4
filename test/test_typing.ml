@@ -66,6 +66,13 @@ let check_ill_typed ~gamma s () =
     Alcotest.fail ("abstractly evaluated to " ^ show_ty t)
   with Typecheck.Type_error _ -> ()
 
+let check_size s n () = 
+    let t = parse_ty s in
+    Alcotest.(check' (option int))
+        ~msg:(Fmt.str "%a" Pretty.ty t)
+        ~expected:n
+        ~actual:(Typecheck.size t)         
+
 let well_typed_tests =
   [
     check_well_typed_s ~gamma:[] (* input expression *) "0"
@@ -80,4 +87,27 @@ let well_typed_tests =
 let ill_typed_tests =
   [ check_ill_typed ~gamma:[] (* input expression *) "1 + true" ]
 
-let tests = [ ("well_typed", well_typed_tests); ("ill_typed", ill_typed_tests) ]
+let size_tests =
+    [ 
+        check_size "Int" None; 
+        check_size "Bool" (Some 2); 
+        check_size "Bool -> Bool" (Some 4); 
+        check_size "Bool -> Bool -> Bool" (Some 16); 
+        check_size "Bool -> Int" None;
+        check_size "! -> !" (Some 0);
+        check_size "() -> !" (Some 0);
+        check_size "() -> Bool" (Some 2);
+        check_size "Bool -> !" (Some 0);
+        check_size "Bool -> ()" (Some 1);
+        check_size "List[Int]" None;
+        check_size "()" (Some 1);
+        check_size "!" (Some 0);
+        check_size "Int + Int" None;
+        check_size "Int + Bool" None;
+        check_size "() + Bool" (Some 3);
+        check_size "Int * Int" None;
+        check_size "Int * Bool" None;
+        check_size "() * Bool" (Some 2);
+    ]
+
+let tests = [ ("well_typed", well_typed_tests); ("ill_typed", ill_typed_tests); ("size", size_tests) ]
