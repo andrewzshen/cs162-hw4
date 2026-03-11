@@ -139,7 +139,6 @@ let rec abstract_eval (env : env) (e : expr) : ty =
         | E1 e1 -> failwith "TODO"
         | E2 e2 -> failwith "TODO" 
         | Either (e, b1, b2) -> failwith "TODO" 
-        | _ -> failwith "TODO"
     with Type_error msg -> ty_err (msg ^ "\nin expression " ^ show_expr e)
 
 let rec size (t : ty) : int option =
@@ -174,4 +173,3 @@ let rec size (t : ty) : int option =
         (match size t1, size t2 with
         | Some s1, Some s2 -> Some (s1 + s2)
         | _ -> None)
-    | _ -> failwith "TODO"
